@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>CHUNKYR // Boot</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Share+Tech+Mono&display=swap');
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Rajdhani', 'Segoe UI', sans-serif;
+      background: #08080e;
+      color: #c8c8d0;
+      height: 100vh;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 1.5rem 2rem;
+    }
+    .logo {
+      font-family: 'Orbitron', monospace;
+      font-size: 2rem;
+      font-weight: 900;
+      color: #fcee0a;
+      text-shadow: 0 0 20px rgba(252,238,10,.6), 0 0 60px rgba(252,238,10,.25);
+      margin-bottom: .4rem;
+      letter-spacing: .05em;
+    }
+    .tagline {
+      font-family: 'Share Tech Mono', monospace;
+      font-size: .7rem;
+      color: #00f0ff;
+      letter-spacing: .3em;
+      text-transform: uppercase;
+      margin-bottom: 1.6rem;
+    }
+    #log {
+      font-family: 'Share Tech Mono', monospace;
+      font-size: .72rem;
+      color: #39ff14;
+      background: rgba(0,240,255,.04);
+      border: 1px solid rgba(0,240,255,.15);
+      padding: 1rem 1.2rem;
+      width: 100%;
+      height: 160px;
+      overflow-y: auto;
+      line-height: 1.6;
+      box-shadow: inset 0 0 30px rgba(0,240,255,.04);
+    }
+    #log .line { display: block; }
+    #log .line.warn { color: #ff9d00; }
+    #log .line.err  { color: #ff2a6d; }
+    .spinner {
+      margin-top: 1rem;
+      width: 18px; height: 18px;
+      border: 2px solid rgba(0,240,255,.15);
+      border-top-color: #00f0ff;
+      border-radius: 50%;
+      animation: spin .7s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+  </style>
+</head>
+<body>
+  <div class="logo">CHUNKYR</div>
+  <div class="tagline">// INITIALIZING</div>
+  <div id="log"></div>
+  <div class="spinner"></div>
+
+  <script>
+    const log = document.getElementById('log');
+    function append(msg, cls = '') {
+      const line = document.createElement('span');
+      line.className = 'line' + (cls ? ' ' + cls : '');
+      line.textContent = msg;
+      log.appendChild(line);
+      log.appendChild(document.createElement('br'));
+      log.scrollTop = log.scrollHeight;
+    }
+
+    // Wire up to the main process via the preload bridge
+    if (window.chunkyr && window.chunkyr.onBootstrapLog) {
+      window.chunkyr.onBootstrapLog((msg) => append(msg));
+      append('> CHUNKYR initializing...');
+    } else {
+      // Fallback if not running in Electron
+      (async () => {
+        const messages = [
+          '> CHUNKYR initializing...',
+          '> Checking dependencies...',
+          '> yt-dlp: loading',
+          '> ffmpeg: scanning PATH',
+          '> Spinning up Flask backend...',
+          '> Listening on 127.0.0.1',
+          '> Loading UI...',
+        ];
+        for (const m of messages) {
+          append(m);
+          await new Promise(r => setTimeout(r, 200));
+        }
+      })();
+    }
+  </script>
+</body>
+</html>
