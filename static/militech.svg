@@ -1,0 +1,217 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1920 1080" width="1920" height="1080">
+  <defs>
+    <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="6" result="blur"/>
+      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <filter id="glow2" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="3" result="blur"/>
+      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#0a0000"/>
+      <stop offset="30%" stop-color="#120000"/>
+      <stop offset="100%" stop-color="#050000"/>
+    </linearGradient>
+    <linearGradient id="redGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#cc0000"/>
+      <stop offset="50%" stop-color="#ff1a1a"/>
+      <stop offset="100%" stop-color="#cc0000"/>
+    </linearGradient>
+    <linearGradient id="redGradV" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#ff1a1a"/>
+      <stop offset="100%" stop-color="#660000"/>
+    </linearGradient>
+    <linearGradient id="orangeGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#ff6600"/>
+      <stop offset="50%" stop-color="#ff8800"/>
+      <stop offset="100%" stop-color="#ff6600"/>
+    </linearGradient>
+    <pattern id="hatch" x="0" y="0" width="8" height="8" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+      <line x1="0" y1="0" x2="0" y2="8" stroke="#ff0000" stroke-width="0.5" opacity="0.15"/>
+    </pattern>
+    <pattern id="grid" x="0" y="0" width="40" height="40" patternUnits="userSpaceOnUse">
+      <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#ff0000" stroke-width="0.3" opacity="0.08"/>
+    </pattern>
+  </defs>
+
+  <!-- Background -->
+  <rect width="1920" height="1080" fill="url(#bgGrad)"/>
+  <rect width="1920" height="1080" fill="url(#grid)"/>
+  <rect width="1920" height="1080" fill="url(#hatch)"/>
+
+  <!-- Dark city silhouette -->
+  <g fill="#0a0000" opacity="0.8">
+    <rect x="0" y="700" width="150" height="380"/>
+    <rect x="130" y="660" width="100" height="420"/>
+    <rect x="210" y="720" width="80" height="360"/>
+    <rect x="280" y="600" width="120" height="480"/>
+    <rect x="390" y="680" width="90" height="400"/>
+    <rect x="470" y="640" width="110" height="440"/>
+    <rect x="570" y="710" width="70" height="370"/>
+    <rect x="630" y="580" width="140" height="500"/>
+    <rect x="760" y="660" width="100" height="420"/>
+    <rect x="850" y="620" width="130" height="460"/>
+    <rect x="970" y="700" width="80" height="380"/>
+    <rect x="1040" y="600" width="160" height="480"/>
+    <rect x="1190" y="680" width="100" height="400"/>
+    <rect x="1280" y="640" width="120" height="440"/>
+    <rect x="1390" y="720" width="90" height="360"/>
+    <rect x="1470" y="590" width="150" height="490"/>
+    <rect x="1610" y="660" width="100" height="420"/>
+    <rect x="1700" y="620" width="80" height="460"/>
+    <rect x="1770" y="700" width="150" height="380"/>
+  </g>
+
+  <!-- Militech logo main -->
+  <g filter="url(#glow)">
+    <!-- Outer frame -->
+    <rect x="460" y="280" width="1000" height="240" rx="4" fill="none" stroke="url(#redGrad)" stroke-width="3"/>
+    <rect x="470" y="290" width="980" height="220" rx="2" fill="#0a0000" stroke="#ff0000" stroke-width="1" opacity="0.9"/>
+    <rect x="475" y="295" width="970" height="210" rx="1" fill="none" stroke="#ff0000" stroke-width="0.5" opacity="0.4"/>
+  </g>
+
+  <!-- MILITECH text -->
+  <text x="960" y="395" text-anchor="middle" font-family="'Arial Black', Impact, sans-serif" font-size="130" font-weight="900" fill="url(#redGrad)" letter-spacing="20" filter="url(#glow)">MILITECH</text>
+
+  <!-- Tagline bar -->
+  <g>
+    <rect x="460" y="520" width="1000" height="50" fill="#1a0000"/>
+    <rect x="460" y="520" width="1000" height="50" fill="none" stroke="url(#redGrad)" stroke-width="2"/>
+    <text x="960" y="554" text-anchor="middle" font-family="'Arial Black', Impact, sans-serif" font-size="24" font-weight="900" fill="#ff6600" letter-spacing="12" filter="url(#glow2)">ARMED  ·  PROFESSIONAL  ·  LETHAL</text>
+  </g>
+
+  <!-- Corner brackets -->
+  <g stroke="#ff0000" stroke-width="3" fill="none" filter="url(#glow2)">
+    <!-- Top left -->
+    <path d="M 460,320 L 460,280 L 500,280"/>
+    <!-- Top right -->
+    <path d="M 1420,320 L 1420,280 L 1460,280"/>
+    <!-- Bottom left -->
+    <path d="M 460,480 L 460,520 L 500,520"/>
+    <!-- Bottom right -->
+    <path d="M 1420,480 L 1420,520 L 1460,520"/>
+  </g>
+
+  <!-- Warning stripes -->
+  <g opacity="0.6">
+    <rect x="0" y="620" width="1920" height="20" fill="url(#redGrad)" opacity="0.15"/>
+    <rect x="0" y="660" width="1920" height="4" fill="url(#orangeGrad)" opacity="0.4"/>
+    <rect x="0" y="620" width="1920" height="3" fill="#ff0000" opacity="0.3"/>
+  </g>
+
+  <!-- Status text panels -->
+  <g opacity="0.5">
+    <!-- Left panel -->
+    <rect x="60" y="300" width="200" height="100" fill="#0a0000" stroke="#ff0000" stroke-width="1"/>
+    <text x="160" y="330" text-anchor="middle" font-family="monospace" font-size="11" fill="#ff0000" letter-spacing="2">THREAT LEVEL</text>
+    <text x="160" y="365" text-anchor="middle" font-family="'Arial Black', Impact, sans-serif" font-size="42" font-weight="900" fill="#ff0000" filter="url(#glow2)">MAX</text>
+    <rect x="80" y="380" width="160" height="4" fill="#ff0000" opacity="0.6"/>
+    <rect x="80" y="380" width="160" height="4" fill="url(#redGrad)"/>
+
+    <!-- Right panel -->
+    <rect x="1660" y="300" width="200" height="100" fill="#0a0000" stroke="#ff0000" stroke-width="1"/>
+    <text x="1760" y="330" text-anchor="middle" font-family="monospace" font-size="11" fill="#ff0000" letter-spacing="2">AUTHORIZATION</text>
+    <text x="1760" y="365" text-anchor="middle" font-family="'Arial Black', Impact, sans-serif" font-size="32" font-weight="900" fill="#ff6600" filter="url(#glow2)">CLEARED</text>
+    <rect x="1680" y="380" width="160" height="4" fill="#ff6600" opacity="0.6"/>
+  </g>
+
+  <!-- Hex codes / tactical data -->
+  <g font-family="monospace" font-size="12" fill="#ff0000" opacity="0.4">
+    <text x="80" y="460">SYS.MILITECH.CORP.v4.077</text>
+    <text x="80" y="480">CLASSIFICATION: OMEGA</text>
+    <text x="80" y="500">DO NOT DISTRIBUTE</text>
+
+    <text x="1740" y="460" text-anchor="end">TACTICAL OVERRIDE</text>
+    <text x="1740" y="480" text-anchor="end">WEAPONS DIVISION</text>
+    <text x="1740" y="500" text-anchor="end">ASSET: AUTHORIZED</text>
+  </g>
+
+  <!-- Targeting reticle lines -->
+  <g stroke="#ff0000" stroke-width="1" opacity="0.2">
+    <line x1="960" y1="580" x2="960" y2="620"/>
+    <line x1="940" y1="600" x2="980" y2="600"/>
+    <circle cx="960" cy="600" r="30" fill="none" stroke-dasharray="4 4"/>
+    <circle cx="960" cy="600" r="50" fill="none"/>
+  </g>
+
+  <!-- Barcode / serial strip -->
+  <g fill="#ff0000" opacity="0.5">
+    <rect x="700" y="640" width="3" height="30"/>
+    <rect x="708" y="640" width="1" height="30"/>
+    <rect x="714" y="640" width="4" height="30"/>
+    <rect x="723" y="640" width="2" height="30"/>
+    <rect x="730" y="640" width="5" height="30"/>
+    <rect x="740" y="640" width="1" height="30"/>
+    <rect x="746" y="640" width="3" height="30"/>
+    <rect x="754" y="640" width="2" height="30"/>
+    <rect x="761" y="640" width="4" height="30"/>
+    <rect x="770" y="640" width="1" height="30"/>
+    <rect x="776" y="640" width="3" height="30"/>
+    <rect x="784" y="640" width="5" height="30"/>
+    <rect x="794" y="640" width="2" height="30"/>
+    <rect x="801" y="640" width="4" height="30"/>
+    <rect x="810" y="640" width="1" height="30"/>
+    <rect x="816" y="640" width="3" height="30"/>
+    <rect x="824" y="640" width="2" height="30"/>
+    <rect x="831" y="640" width="5" height="30"/>
+    <rect x="841" y="640" width="1" height="30"/>
+    <rect x="847" y="640" width="4" height="30"/>
+    <rect x="856" y="640" width="2" height="30"/>
+    <rect x="863" y="640" width="3" height="30"/>
+    <rect x="871" y="640" width="1" height="30"/>
+    <rect x="877" y="640" width="4" height="30"/>
+    <rect x="886" y="640" width="2" height="30"/>
+    <rect x="893" y="640" width="3" height="30"/>
+    <rect x="901" y="640" width="5" height="30"/>
+    <rect x="911" y="640" width="1" height="30"/>
+    <rect x="917" y="640" width="3" height="30"/>
+    <rect x="925" y="640" width="2" height="30"/>
+    <rect x="932" y="640" width="4" height="30"/>
+    <rect x="941" y="640" width="1" height="30"/>
+    <rect x="947" y="640" width="3" height="30"/>
+    <rect x="955" y="640" width="2" height="30"/>
+    <rect x="962" y="640" width="5" height="30"/>
+    <rect x="972" y="640" width="1" height="30"/>
+    <rect x="978" y="640" width="4" height="30"/>
+    <rect x="987" y="640" width="2" height="30"/>
+    <rect x="994" y="640" width="3" height="30"/>
+    <rect x="1002" y="640" width="1" height="30"/>
+    <rect x="1008" y="640" width="4" height="30"/>
+    <rect x="1017" y="640" width="2" height="30"/>
+    <rect x="1024" y="640" width="3" height="30"/>
+    <rect x="1032" y="640" width="5" height="30"/>
+    <rect x="1042" y="640" width="1" height="30"/>
+    <rect x="1048" y="640" width="3" height="30"/>
+    <rect x="1056" y="640" width="2" height="30"/>
+    <rect x="1063" y="640" width="4" height="30"/>
+    <rect x="1072" y="640" width="1" height="30"/>
+    <rect x="1078" y="640" width="3" height="30"/>
+    <rect x="1086" y="640" width="2" height="30"/>
+    <rect x="1093" y="640" width="5" height="30"/>
+    <rect x="1103" y="640" width="1" height="30"/>
+    <rect x="1109" y="640" width="4" height="30"/>
+    <rect x="1118" y="640" width="2" height="30"/>
+    <rect x="1125" y="640" width="3" height="30"/>
+  </g>
+  <text x="960" y="672" text-anchor="middle" font-family="monospace" font-size="9" fill="#ff0000" letter-spacing="6" opacity="0.5">MT-0771-ARMED-FORCE-DIV-6</text>
+
+  <!-- Red accent glow at bottom -->
+  <rect x="0" y="1040" width="1920" height="40" fill="url(#redGradV)" opacity="0.15"/>
+
+  <!-- Tactical markers left -->
+  <g fill="#ff0000" opacity="0.3">
+    <text x="60" y="720" font-family="monospace" font-size="10" letter-spacing="1">■ TACTICAL OPS</text>
+    <text x="60" y="740" font-family="monospace" font-size="10" letter-spacing="1">■ WEAPONS DIV</text>
+    <text x="60" y="760" font-family="monospace" font-size="10" letter-spacing="1">■ ARMOR PLATE</text>
+    <text x="60" y="780" font-family="monospace" font-size="10" letter-spacing="1">■ SUPPORT UNIT</text>
+  </g>
+
+  <!-- Tactical markers right -->
+  <g fill="#ff0000" opacity="0.3">
+    <text x="1860" y="720" text-anchor="end" font-family="monospace" font-size="10" letter-spacing="1">CONTRACTOR ■</text>
+    <text x="1860" y="740" text-anchor="end" font-family="monospace" font-size="10" letter-spacing="1">MERCENARY ■</text>
+    <text x="1860" y="760" text-anchor="end" font-family="monospace" font-size="10" letter-spacing="1">GOV CONTRACT ■</text>
+    <text x="1860" y="780" text-anchor="end" font-family="monospace" font-size="10" letter-spacing="1">APPROVED ■</text>
+  </g>
+</svg>
