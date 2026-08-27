@@ -1,17 +1,25 @@
 /**
- * CHUNKYR // BREACH PROTOCOL v2
+ * CHUNKYR // BREACH PROTOCOL v3
  *
  * Accurate recreation of the Cyberpunk 2077 Breach Protocol minigame.
  *
- * How it works:
- *  - 5×5 grid of hex code pairs
- *  - Player clicks a START cell on the perimeter, then clicks adjacent cells to move
- *  - Each move collects the hex code into a 7-slot buffer
- *  - Match target sequences (shown in color) IN ORDER to win
- *  - ICE walls block movement. Already-visited cells can't be re-entered.
- *  - Special bonus cells: +3s (clock icon), buffer reset (refresh icon)
- *  - 20-second countdown
- *  - Success → ACCESS GRANTED. Failure/timeout/overflow → ACCESS DENIED.
+ * How it ACTUALLY works in CP2077:
+ *  - 5x5 grid of hex code pairs
+ *  - 2-3 daemon sequences (targets) shown at top, color-coded
+ *  - You select from the TOP ROW first
+ *  - Then you alternate: pick from the COLUMN of your last pick, then
+ *    the ROW of that pick, then COLUMN, then ROW...
+ *  - Each selected cell is added to the buffer
+ *  - Buffer size limit (default 7)
+ *  - You don't have to fill the whole buffer — you can stop when all
+ *    target sequences are matched in order
+ *  - Once you start picking, the timer ticks down
+ *  - 20 second countdown
+ *  - Match all targets in order = SUCCESS. Buffer full or timer hit = FAIL.
+ *
+ * Hex codes can repeat in the buffer. You can stop the run at any time
+ * by pressing the SUBMIT button, but the minigame auto-wins when all
+ * sequences are matched.
  */
 
 (function (global) {
@@ -24,20 +32,15 @@
     'B1', '4E', '9C', '20', 'DF', '56', '88', 'C7', '1D', '3A',
   ];
 
-  // ── Cyberpunk color palette for targets ────────────────────────────────────
+  // ── Cyberpunk color palette for target sequences ───────────────────────────
   const TARGET_COLORS = [
-    '#ff2a6d', // magenta / pink
+    '#ff2a6d', // magenta
     '#00f0ff', // cyan
     '#39ff14', // neon green
-    '#ff9d00', // amber / orange
+    '#ff9d00', // amber
     '#fcee0a', // yellow
     '#bf5af2', // purple
-    '#64d2ff', // light blue
   ];
-
-  // ── Bonus cell types ───────────────────────────────────────────────────────
-  const BONUS_TIME  = '+3s';
-  const BONUS_RESET = '↺';   // buffer reset
 
   // ── Helpers ────────────────────────────────────────────────────────────────
   function shuffle(arr) {
@@ -49,8 +52,8 @@
     return a;
   }
 
-  function pick(arr, n) {
-    return shuffle(arr).slice(0, n);
+  function pickRandom(arr) {
+    return arr[Math.floor(Math.random() * arr.length)];
   }
 
   // ── BreachProtocol class ───────────────────────────────────────────────────
@@ -66,7 +69,7 @@
       if (this._destroyed) return;
       this._init();
       this._show();
-      // Don't start timer yet — wait for player to click a start cell
+      // Timer doesn't start until first pick (real CP2077 behavior)
       this._timerStarted = false;
     }
 
@@ -84,60 +87,23 @@
     _init() {
       this._phase     = 'aiming';  // 'aiming' | 'playing' | 'won' | 'lost'
       this._timeLeft  = 20;
-      this._buffer    = [];
-      this._bufferSlots = Array.from({ length: 7 }, () => '');
-      this._pos       = null;      // { row, col } — only set after START
-      this._started   = false;
-      this._timerStarted = false;
+      this._buffer    = [];        // selected hex codes
+      this._bufferSlots = Array.from({ length: 7 }, () => null);
+      this._bufferSize = 7;
+      this._lastPick = null;       // { row, col } of last selected cell
+      this._axis     = 'row';      // 'row' | 'col' — what axis the NEXT pick must be on
 
-      // Generate grid, targets, start positions
       this._grid    = this._generateGrid();
       this._targets = this._generateTargets();
-      // Start positions: any of the 16 perimeter cells
-      this._startOptions = this._getStartPositions();
-
-      // Track visited for visual trail
-      this._visited = new Set();
-      this._path    = []; // ordered list of visited cells for trail rendering
-    }
-
-    _getStartPositions() {
-      // Return all perimeter cell indices (row, col) the player can start from
-      const pos = [];
-      for (let r = 0; r < 5; r++) {
-        for (let c = 0; c < 5; c++) {
-          if (r === 0 || r === 4 || c === 0 || c === 4) {
-            pos.push({ row: r, col: c });
-          }
-        }
-      }
-      return shuffle(pos);
     }
 
     _generateGrid() {
-      // Fill with hex codes, then add ICE walls and bonus cells
-      const pool = shuffle(HEX_POOL);
-      let poolIdx = 0;
+      // 5x5 grid of random hex codes
       const grid = [];
-
-      // Decide special cells: 1 ICE wall + 1 bonus cell (randomly)
-      const icePos = Math.floor(Math.random() * 24);  // 0-23 (skip a perimeter cell)
-      const bonusType = Math.random() < 0.5 ? BONUS_TIME : BONUS_RESET;
-      const bonusPos = (icePos + 1 + Math.floor(Math.random() * 22)) % 24; // spread apart
-
-      let specialIdx = 0;
       for (let r = 0; r < 5; r++) {
         const row = [];
         for (let c = 0; c < 5; c++) {
-          // Map flat index (0-24) to row/col
-          const flatIdx = r * 5 + c;
-          if (flatIdx === icePos) {
-            row.push({ type: 'ice', code: 'ICE' });
-          } else if (flatIdx === bonusPos) {
-            row.push({ type: 'bonus', code: bonusType });
-          } else {
-            row.push({ type: 'normal', code: pool[poolIdx++ % pool.length] });
-          }
+          row.push(pickRandom(HEX_POOL));
         }
         grid.push(row);
       }
@@ -145,135 +111,81 @@
     }
 
     _generateTargets() {
-      // Generate 2 targets, each 3 codes long (classic CP2077 style)
+      // 2 sequences, each 3 codes long
       const count = 2;
       const targets = [];
-      // Use specific codes from the pool for reliability
       const usedCodes = new Set();
 
       for (let i = 0; i < count; i++) {
         const color = TARGET_COLORS[i % TARGET_COLORS.length];
         const seq = [];
         let attempts = 0;
-        while (seq.length < 3 && attempts < 50) {
+        while (seq.length < 3 && attempts < 100) {
           attempts++;
-          const code = HEX_POOL[Math.floor(Math.random() * HEX_POOL.length)];
-          // Avoid duplicates within this sequence and across previous targets
-          if (!seq.includes(code) && !usedCodes.has(code)) {
+          const code = pickRandom(HEX_POOL);
+          if (!seq.includes(code)) {
             seq.push(code);
+            usedCodes.add(code);
           }
         }
-        seq.forEach(c => usedCodes.add(c));
-        targets.push({ seq, color });
+        targets.push({ seq, color, label: `1x3` });
       }
       return targets;
     }
 
-    // ── Start position selection ──────────────────────────────────────────────
-    _getAdjacentCells(row, col) {
-      const adj = [];
-      const dirs = [[-1, 0], [1, 0], [0, -1], [0, 1]];
-      for (const [dr, dc] of dirs) {
-        const nr = row + dr, nc = col + dc;
-        if (nr >= 0 && nr < 5 && nc >= 0 && nc < 5) {
-          adj.push({ row: nr, col: nc });
-        }
-      }
-      return adj;
-    }
+    // ── Pick logic ───────────────────────────────────────────────────────────
+    _canPick(row, col) {
+      // No picking before timer is going — actually first pick is from top row
+      if (this._phase === 'won' || this._phase === 'lost') return false;
 
-    _isStartPosition(row, col) {
-      return this._startOptions.some(s => s.row === row && s.col === col);
-    }
-
-    // ── Cell interaction ─────────────────────────────────────────────────────
-    _onCellClick(row, col) {
-      if (this._phase === 'won' || this._phase === 'lost') return;
-
-      const cell = this._grid[row][col];
-
-      // If not started yet — only allow clicking on START perimeter cells
-      if (!this._started) {
-        if (cell.type === 'ice') return; // can't start on ICE
-        if (!this._isStartPosition(row, col)) return;
-        // Start!
-        this._started = true;
-        this._phase = 'playing';
-        this._pos = { row, col };
-        this._visited.add(`${row},${col}`);
-        this._path.push({ row, col });
-        this._collectCell(row, col);
-        this._renderGrid();
-        // Start the timer NOW (gives player time to read targets)
-        this._startTimer();
-        return;
+      // First pick must be from ROW 0 (top row)
+      if (this._buffer.length === 0) {
+        return row === 0;
       }
 
-      // Already playing — can only move to adjacent unvisited non-ICE cells
-      if (this._phase !== 'playing') return;
-      if (cell.type === 'ice') return;
-      if (this._visited.has(`${row},${col}`)) return;
-
-      const adj = this._getAdjacentCells(this._pos.row, this._pos.col);
-      if (!adj.some(a => a.row === row && a.col === col)) return;
-
-      // Move!
-      this._pos = { row, col };
-      this._visited.add(`${row},${col}`);
-      this._path.push({ row, col });
-      this._collectCell(row, col);
-      this._renderGrid();
-    }
-
-    _collectCell(row, col) {
-      const cell = this._grid[row][col];
-
-      if (cell.type === 'bonus') {
-        if (cell.code === BONUS_TIME) {
-          this._timeLeft = Math.min(20, this._timeLeft + 3);
-          this._showBonusFlash(`+3 SECONDS`, '#39ff14');
-        } else if (cell.code === BONUS_RESET) {
-          this._buffer = [];
-          this._bufferSlots = Array.from({ length: 7 }, () => '');
-          this._showBonusFlash(`BUFFER RESET`, '#00f0ff');
-        }
-        // Bonus cells don't fill the buffer
+      // Subsequent picks: must match the current axis requirement
+      // If last pick was on column X, you must pick from the same column
+      // (any row in that column). If last pick was on row Y, you must
+      // pick from the same row (any column in that row).
+      if (this._axis === 'col') {
+        return col === this._lastPick.col;
       } else {
-        // Normal hex code
-        if (this._buffer.length >= 7) return; // shouldn't happen — overflow handled separately
-        this._buffer.push(cell.code);
-        this._bufferSlots[this._buffer.length - 1] = cell.code;
+        return row === this._lastPick.row;
+      }
+    }
+
+    _pick(row, col) {
+      if (!this._canPick(row, col)) return;
+
+      const code = this._grid[row][col];
+      this._buffer.push(code);
+      this._bufferSlots[this._buffer.length - 1] = { code, row, col };
+      this._lastPick = { row, col };
+
+      // Alternate axis for next pick
+      this._axis = this._axis === 'row' ? 'col' : 'row';
+
+      // Play sound
+      this._playSound('pick');
+
+      // Start timer on first pick
+      if (!this._timerStarted) {
+        this._timerStarted = true;
+        this._startTimer();
       }
 
-      this._renderBuffer();
+      this._renderAll();
       this._checkWin();
     }
 
-    _showBonusFlash(text, color) {
-      const el = document.getElementById('bp-bonus-flash');
-      if (!el) return;
-      el.textContent = text;
-      el.style.color = color;
-      el.style.opacity = '1';
-      el.style.transform = 'translateY(0)';
-      setTimeout(() => {
-        el.style.opacity = '0';
-        el.style.transform = 'translateY(-20px)';
-      }, 1200);
-    }
-
-    // ── Win/Lose check ───────────────────────────────────────────────────────
     _checkWin() {
-      // Check if buffer starts with all targets consecutively
       const matched = this._countConsecutiveMatches();
       if (matched === this._targets.length) {
         this._win();
         return;
       }
-      if (this._buffer.length >= 7) {
-        if (matched < this._targets.length) {
-          this._lose('BUFFER OVERFLOW');
-        }
+      if (this._buffer.length >= this._bufferSize) {
+        this._lose('BUFFER OVERFLOW');
       }
     }
 
@@ -327,6 +239,7 @@
 
     // ── Timer ───────────────────────────────────────────────────────────────
     _startTimer() {
+      this._phase = 'playing';
       this._clearTimer();
       this._timerId = setInterval(() => this._tick(), 1000);
     }
@@ -340,73 +253,51 @@
       try {
         const ctx = new (window.AudioContext || window.webkitAudioContext)();
         const gain = ctx.createGain();
-        gain.gain.value = 0.15;
+        gain.gain.value = 0.1;
         gain.connect(ctx.destination);
 
         const osc = ctx.createOscillator();
         osc.connect(gain);
-        gain.connect(ctx.destination);
 
-        if (type === 'collect') {
-          osc.frequency.value = 800 + Math.random() * 400;
+        if (type === 'pick') {
+          osc.frequency.value = 600 + Math.random() * 300;
           osc.type = 'square';
-          gain.gain.setValueAtTime(0.1, ctx.currentTime);
-          gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.08);
+          gain.gain.setValueAtTime(0.08, ctx.currentTime);
+          gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.06);
           osc.start(ctx.currentTime);
-          osc.stop(ctx.currentTime + 0.08);
+          osc.stop(ctx.currentTime + 0.06);
         } else if (type === 'win') {
-          osc.frequency.value = 523;
           osc.type = 'sine';
-          gain.gain.setValueAtTime(0.15, ctx.currentTime);
-          osc.start(ctx.currentTime);
+          gain.gain.setValueAtTime(0.12, ctx.currentTime);
+          osc.frequency.setValueAtTime(523, ctx.currentTime);
           osc.frequency.setValueAtTime(659, ctx.currentTime + 0.15);
           osc.frequency.setValueAtTime(784, ctx.currentTime + 0.3);
           gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.6);
+          osc.start(ctx.currentTime);
           osc.stop(ctx.currentTime + 0.6);
         } else if (type === 'lose') {
           osc.frequency.value = 200;
           osc.type = 'sawtooth';
-          gain.gain.setValueAtTime(0.15, ctx.currentTime);
+          gain.gain.setValueAtTime(0.12, ctx.currentTime);
           osc.frequency.exponentialRampToValueAtTime(80, ctx.currentTime + 0.5);
           gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.5);
           osc.start(ctx.currentTime);
           osc.stop(ctx.currentTime + 0.5);
         }
-      } catch (e) {
-        // Audio not supported — silent fail
-      }
+      } catch (e) {}
     }
 
     // ── Input ───────────────────────────────────────────────────────────────
     _setupInput() {
       this._keyHandler = (e) => {
-        if (this._phase === 'won' || this._phase === 'lost') return;
         if (e.key === 'Escape') { this._restart(); return; }
-        if (!this._started) {
-          // Before starting: allow starting from any perimeter cell via keyboard
+        if (this._phase === 'won' || this._phase === 'lost') return;
+        if (this._phase === 'aiming') {
           if (e.key === 'Enter' || e.key === ' ') {
-            // Start from the first available position
-            if (this._startOptions.length > 0) {
-              const s = this._startOptions[0];
-              this._onCellClick(s.row, s.col);
-            }
+            // Pick the first cell in top row as default
+            this._pick(0, 0);
           }
-          return;
         }
-        if (this._phase !== 'playing') return;
-        const dirs = {
-          ArrowUp: [-1, 0], w: [-1, 0], W: [-1, 0],
-          ArrowDown: [1, 0], s: [1, 0], S: [1, 0],
-          ArrowLeft: [0, -1], a: [0, -1], A: [0, -1],
-          ArrowRight: [0, 1], d: [0, 1], D: [0, 1],
-        };
-        const d = dirs[e.key];
-        if (!d) return;
-        e.preventDefault();
-        const adj = this._getAdjacentCells(this._pos.row, this._pos.col);
-        // Pick the first valid adjacent cell in that direction
-        const target = adj.find(a => a.row === this._pos.row + d[0] && a.col === this._pos.col + d[1]);
-        if (target) this._onCellClick(target.row, target.col);
       };
       window.addEventListener('keydown', this._keyHandler);
     }
@@ -421,7 +312,7 @@
       this._show();
     }
 
-    // ── DOM ─────────────────────────────────────────────────────────────────
+    // ── DOM rendering ────────────────────────────────────────────────────────
     _show() {
       const existing = document.getElementById('bp-overlay');
       if (existing) existing.remove();
@@ -429,13 +320,11 @@
       const html = `
       <div id="bp-overlay">
         <div class="bp-container">
-          <!-- Header -->
           <div class="bp-header">
             <div class="bp-title">// BREACH PROTOCOL</div>
-            <div class="bp-subtitle">HACK THE ICE</div>
+            <div class="bp-subtitle">EXTRACT DAEMONS FROM THE NET</div>
           </div>
 
-          <!-- Timer row -->
           <div class="bp-timer-row">
             <div class="bp-timer-label">TIME</div>
             <div class="bp-timer-bar-wrap">
@@ -444,39 +333,36 @@
             <div class="bp-timer-value" id="bp-timer-value">20</div>
           </div>
 
-          <!-- Bonus flash -->
-          <div class="bp-bonus-flash" id="bp-bonus-flash"></div>
+          <div class="bp-instruction-banner" id="bp-instr-banner">
+            SELECT A CODE FROM THE TOP ROW
+          </div>
 
-          <!-- Targets -->
           <div class="bp-targets-section">
-            <div class="bp-section-label">// TARGET SEQUENCES</div>
+            <div class="bp-section-label">// DAEMONS TO EXTRACT</div>
             <div class="bp-targets" id="bp-targets"></div>
           </div>
 
-          <!-- Buffer -->
           <div class="bp-buffer-row">
             <div class="bp-section-label">// BUFFER</div>
             <div class="bp-buffer" id="bp-buffer"></div>
           </div>
 
-          <!-- Grid -->
           <div class="bp-grid-wrap">
             <div class="bp-grid" id="bp-grid"></div>
           </div>
 
-          <!-- Status / Result -->
           <div class="bp-status" id="bp-status"></div>
 
-          <!-- Controls -->
           <div class="bp-controls">
-            <button class="bp-btn-restart" id="bp-restart-btn">↺ RESTART</button>
+            <button class="bp-btn bp-btn-secondary" id="bp-restart-btn">↺ RESTART</button>
           </div>
 
-          <!-- Instructions -->
           <div class="bp-instructions">
-            <span id="bp-instr-text">CLICK A START CELL ON THE GRID PERIMETER</span>
+            <span>PICK FROM TOP ROW</span>
             <span>·</span>
-            <span>THEN CLICK ADJACENT CELLS TO MOVE</span>
+            <span>ALTERNATE ROW/COLUMN</span>
+            <span>·</span>
+            <span>EXTRACT ALL DAEMONS</span>
           </div>
         </div>
       </div>
@@ -487,7 +373,6 @@
       document.body.appendChild(container.firstElementChild);
       this._overlay = document.getElementById('bp-overlay');
 
-      // Restart button
       document.getElementById('bp-restart-btn').addEventListener('click', () => this._restart());
 
       this._renderTargets();
@@ -497,15 +382,25 @@
       this._setupInput();
     }
 
+    _renderAll() {
+      this._renderBuffer();
+      this._renderGrid();
+      this._updateInstructionBanner();
+    }
+
     _renderTargets() {
       const el = document.getElementById('bp-targets');
       if (!el) return;
-      el.innerHTML = this._targets.map(t =>
-        `<div class="bp-target" data-color="${t.color}" style="border-color:${t.color};">
-          ${t.seq.map(c => `<span class="bp-hex" style="background:${t.color}20;border-color:${t.color};color:${t.color};text-shadow:0 0 8px ${t.color}">${c}</span>`).join('')}
-          <span class="bp-target-check" id="bp-check-${t.seq[0]}">✓</span>
-        </div>`
-      ).join('');
+      el.innerHTML = this._targets.map((t, i) => `
+        <div class="bp-target" data-target-idx="${i}" style="border-color:${t.color}40;background:${t.color}08;">
+          <div class="bp-target-label" style="color:${t.color}">${t.label}</div>
+          ${t.seq.map(code => `
+            <div class="bp-target-code" data-code="${code}">
+              <span class="bp-hex" style="background:${t.color}15;border-color:${t.color};color:${t.color};text-shadow:0 0 6px ${t.color}">${code}</span>
+            </div>
+          `).join('')}
+        </div>
+      `).join('');
     }
 
     _renderBuffer() {
@@ -513,45 +408,71 @@
       if (!el) return;
 
       const matched = this._countConsecutiveMatches();
-      let matchedUpTo = 0;
-      el.innerHTML = this._bufferSlots.map((code, i) => {
-        let slotClass = 'bp-buf-slot';
-        let filled = i < this._buffer.length;
-        let codeColor = '#00f0ff';
-        let bgColor = 'rgba(0,240,255,0.06)';
 
-        if (filled) {
-          // Find which target this slot belongs to for coloring
-          let bufIdx = 0;
-          for (let t = 0; t < this._targets.length; t++) {
-            const target = this._targets[t];
-            if (bufIdx + target.seq.length <= i + 1 && bufIdx <= i) {
-              const inTarget = i - bufIdx < target.seq.length;
-              if (inTarget) {
-                codeColor = target.color;
-                bgColor = target.color + '15';
-              }
-              bufIdx += target.seq.length;
+      // Calculate how many cells belong to each matched target for color coding
+      const cellColors = new Array(this._buffer.length).fill(null);
+      let bufPos = 0;
+      for (let tIdx = 0; tIdx < this._targets.length && bufPos < this._buffer.length; tIdx++) {
+        const target = this._targets[tIdx];
+        let ok = true;
+        for (let i = 0; i < target.seq.length; i++) {
+          if (this._buffer[bufPos + i] !== target.seq[i]) { ok = false; break; }
+        }
+        if (ok) {
+          for (let i = 0; i < target.seq.length; i++) {
+            if (bufPos + i < this._buffer.length) {
+              cellColors[bufPos + i] = target.color;
             }
           }
-        }
-
-        return `<div class="${slotClass}${filled ? ' filled' : ''}" style="${filled ? `border-color:${codeColor};background:${bgColor}` : ''}">
-          <span class="bp-buf-code" style="${filled ? `color:${codeColor};text-shadow:0 0 6px ${codeColor}` : ''}">${code || '──'}</span>
-        </div>`;
-      }).join('');
-
-      // Update target matched states
-      this._targets.forEach((t, ti) => {
-        const checkEl = document.getElementById(`bp-check-${t.seq[0]}`);
-        if (!checkEl) return;
-        const targetRow = el.parentElement.querySelector(`.bp-target[data-color="${t.color}"]`);
-        if (ti < matched) {
-          checkEl.style.opacity = '1';
-          if (targetRow) targetRow.classList.add('matched');
+          bufPos += target.seq.length;
         } else {
-          checkEl.style.opacity = '0';
-          if (targetRow) targetRow.classList.remove('matched');
+          break;
+        }
+      }
+
+      // Build the buffer UI
+      let slotsHTML = '';
+      for (let i = 0; i < this._bufferSize; i++) {
+        const slot = this._bufferSlots[i];
+        if (slot) {
+          const color = cellColors[i] || '#00f0ff';
+          slotsHTML += `
+            <div class="bp-buf-slot filled" style="border-color:${color};background:${color}20;box-shadow:0 0 10px ${color}80;">
+              <span class="bp-buf-code" style="color:${color};text-shadow:0 0 8px ${color}">${slot.code}</span>
+            </div>`;
+        } else {
+          slotsHTML += `<div class="bp-buf-slot"><span class="bp-buf-code empty">──</span></div>`;
+        }
+      }
+      el.innerHTML = slotsHTML;
+
+      // Update target states (highlight matched, fade others)
+      this._targets.forEach((t, i) => {
+        const targetEl = el.parentElement.querySelector(`.bp-target[data-target-idx="${i}"]`);
+        if (!targetEl) return;
+        if (i < matched) {
+          targetEl.classList.add('matched');
+        } else {
+          targetEl.classList.remove('matched');
+        }
+      });
+
+      // Update target DOM status
+      this._updateTargetStatus();
+    }
+
+    _updateTargetStatus() {
+      const matched = this._countConsecutiveMatches();
+      const targetEls = document.querySelectorAll('.bp-target');
+      targetEls.forEach((el, i) => {
+        if (i < matched) {
+          el.classList.add('matched');
+          el.classList.remove('active');
+        } else if (i === matched) {
+          el.classList.add('active');
+          el.classList.remove('matched');
+        } else {
+          el.classList.remove('active', 'matched');
         }
       });
     }
@@ -565,57 +486,69 @@
         const rowEl = document.createElement('div');
         rowEl.className = 'bp-grid-row';
         for (let c = 0; c < 5; c++) {
-          const cell = this._grid[r][c];
-          const key = `${r},${c}`;
-          const isVisited = this._visited.has(key);
-          const isPos = this._pos && this._pos.row === r && this._pos.col === c;
-          const isStart = this._isStartPosition(r, c) && !this._started && cell.type !== 'ice';
-          const isAdjacent = this._pos && this._getAdjacentCells(this._pos.row, this._pos.col).some(a => a.row === r && a.col === c);
-          const canClick = (isStart || (isAdjacent && !isVisited && cell.type !== 'ice'));
-
           const cellEl = document.createElement('div');
-          let classes = 'bp-cell';
-          if (cell.type === 'ice')    classes += ' ice';
-          if (cell.type === 'bonus')   classes += ' bonus';
-          if (isVisited)               classes += ' visited';
-          if (isPos)                  classes += ' pos';
-          if (isStart)                classes += ' start-cell';
-          if (isAdjacent && !isVisited && cell.type !== 'ice') classes += ' can-move';
-          if (canClick)                classes += ' clickable';
-
-          cellEl.className = classes;
+          cellEl.className = 'bp-cell';
           cellEl.dataset.row = r;
           cellEl.dataset.col = c;
+          cellEl.textContent = this._grid[r][c];
 
-          // Cell content
-          if (cell.type === 'ice') {
-            cellEl.innerHTML = `<span class="bp-ice-text">ICE</span>`;
-          } else if (cell.type === 'bonus') {
-            cellEl.innerHTML = `<span class="bp-bonus-text">${cell.code}</span>`;
-          } else {
-            cellEl.textContent = cell.code;
+          // Check if this cell is a valid pick
+          const isPickable = this._canPick(r, c);
+
+          // Highlight valid picks
+          if (isPickable && this._phase !== 'won' && this._phase !== 'lost') {
+            cellEl.classList.add('pickable');
+
+            // Different highlight for first pick vs subsequent
+            if (this._buffer.length === 0) {
+              cellEl.classList.add('first-pick');
+            } else {
+              cellEl.classList.add('next-pick');
+            }
+
+            cellEl.addEventListener('click', () => this._pick(r, c));
           }
 
-          if (canClick) {
-            cellEl.addEventListener('click', () => {
-              this._playSound('collect');
-              this._onCellClick(r, c);
-            });
+          // Highlight last pick
+          if (this._lastPick && this._lastPick.row === r && this._lastPick.col === c) {
+            cellEl.classList.add('last-pick');
+          }
+
+          // Show row/column highlight for the active axis
+          if (this._lastPick && this._phase === 'playing') {
+            if (this._axis === 'col' && c === this._lastPick.col) {
+              cellEl.classList.add('active-axis');
+            } else if (this._axis === 'row' && r === this._lastPick.row) {
+              cellEl.classList.add('active-axis');
+            }
+          }
+
+          // Show first-pick highlight on row 0 when buffer is empty
+          if (this._buffer.length === 0 && r === 0) {
+            cellEl.classList.add('top-row-hint');
           }
 
           rowEl.appendChild(cellEl);
         }
         el.appendChild(rowEl);
       }
+    }
 
-      // Update instructions
-      const instr = document.getElementById('bp-instr-text');
-      if (instr) {
-        if (!this._started) {
-          instr.textContent = 'CLICK A START CELL ON THE GRID PERIMETER';
-        } else {
-          instr.textContent = 'COLLECT ALL TARGET SEQUENCES IN ORDER';
-        }
+    _updateInstructionBanner() {
+      const banner = document.getElementById('bp-instr-banner');
+      if (!banner) return;
+      if (this._phase === 'won') {
+        banner.textContent = '✓ ACCESS GRANTED';
+        banner.className = 'bp-instruction-banner success';
+      } else if (this._phase === 'lost') {
+        banner.textContent = '✗ ACCESS DENIED';
+        banner.className = 'bp-instruction-banner failed';
+      } else if (this._buffer.length === 0) {
+        banner.textContent = 'SELECT A CODE FROM THE TOP ROW';
+      } else {
+        banner.textContent = this._axis === 'col'
+          ? `SELECT FROM COLUMN ${this._lastPick.col + 1} (TOP TO BOTTOM)`
+          : `SELECT FROM ROW ${this._lastPick.row + 1} (LEFT TO RIGHT)`;
       }
     }
 
@@ -643,7 +576,7 @@
       if (!statusEl) return;
       statusEl.className = 'bp-status ' + (won ? 'won' : 'lost');
       statusEl.innerHTML = won
-        ? `<div class="bp-result-text">ACCESS GRANTED</div><div class="bp-result-sub">ICE BREACHED. PROCEEDING...</div>`
+        ? `<div class="bp-result-text">ACCESS GRANTED</div><div class="bp-result-sub">ALL DAEMONS EXTRACTED</div>`
         : `<div class="bp-result-text">ACCESS DENIED</div><div class="bp-result-sub">${reason}</div>`;
     }
 

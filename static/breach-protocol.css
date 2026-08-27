@@ -140,19 +140,44 @@
   transition: color 0.3s;
 }
 
-/* ── Bonus flash ── */
-.bp-bonus-flash {
+/* ── Instruction banner ── */
+.bp-instruction-banner {
   text-align: center;
   font-family: 'Orbitron', monospace;
-  font-size: 1.1rem;
-  font-weight: 900;
-  letter-spacing: .2em;
-  min-height: 1.4rem;
-  opacity: 0;
-  transform: translateY(10px);
-  transition: opacity 0.3s, transform 0.3s;
-  margin-bottom: .6rem;
-  text-shadow: 0 0 20px currentColor;
+  font-size: .95rem;
+  font-weight: 700;
+  letter-spacing: .18em;
+  padding: .55rem .8rem;
+  margin-bottom: 1rem;
+  color: var(--yellow, #fcee0a);
+  text-shadow: 0 0 10px var(--yellow), 0 0 20px rgba(252,238,10,0.4);
+  background: rgba(252,238,10,0.06);
+  border: 1px solid rgba(252,238,10,0.4);
+  text-transform: uppercase;
+  animation: bp-banner-pulse 1.5s ease-in-out infinite;
+}
+.bp-instruction-banner.success {
+  color: #39ff14;
+  text-shadow: 0 0 10px #39ff14, 0 0 25px rgba(57,255,20,0.5);
+  background: rgba(57,255,20,0.08);
+  border-color: rgba(57,255,20,0.6);
+  animation: bp-banner-success 0.6s ease-in-out infinite alternate;
+}
+.bp-instruction-banner.failed {
+  color: var(--magenta, #ff2a6d);
+  text-shadow: 0 0 10px var(--magenta), 0 0 25px rgba(255,42,109,0.5);
+  background: rgba(255,42,109,0.08);
+  border-color: rgba(255,42,109,0.6);
+  animation: bp-lost-shake 0.15s ease-in-out 4;
+}
+
+@keyframes bp-banner-pulse {
+  0%, 100% { box-shadow: 0 0 0 rgba(252,238,10,0); }
+  50% { box-shadow: 0 0 18px rgba(252,238,10,0.3); }
+}
+@keyframes bp-banner-success {
+  from { box-shadow: 0 0 10px rgba(57,255,20,0.3); }
+  to   { box-shadow: 0 0 25px rgba(57,255,20,0.7); }
 }
 
 /* ── Section labels ── */
@@ -184,6 +209,16 @@
   color: #39ff14;
   text-shadow: 0 0 8px #39ff14;
 }
+.bp-target.active {
+  box-shadow: 0 0 12px currentColor;
+}
+
+.bp-target-label {
+  font-size: .65rem;
+  letter-spacing: .15em;
+  margin-right: .4rem;
+  font-weight: 700;
+}
 
 .bp-hex {
   display: inline-block;
@@ -194,15 +229,6 @@
   text-align: center;
   border: 1px solid;
   background: rgba(0,0,0,0.4);
-}
-
-.bp-target-check {
-  margin-left: auto;
-  font-size: 1rem;
-  opacity: 0;
-  color: #39ff14;
-  text-shadow: 0 0 10px #39ff14;
-  transition: opacity 0.3s;
 }
 
 /* ── Buffer ── */
@@ -243,6 +269,10 @@
   color: var(--cyan, #00f0ff);
   text-shadow: 0 0 6px var(--cyan);
 }
+.bp-buf-code.empty {
+  color: rgba(0,240,255,0.2);
+  text-shadow: none;
+}
 
 /* ── Grid ── */
 .bp-grid-wrap { display: flex; justify-content: center; margin-bottom: 1rem; }
@@ -277,51 +307,58 @@
   position: relative;
 }
 
-/* Perimeter start cells (before game starts) */
-.bp-cell.start-cell {
+/* Cells in the top row, hint for first pick */
+.bp-cell.top-row-hint {
+  border-color: rgba(252,238,10,0.25);
+  background: rgba(252,238,10,0.03);
+}
+
+/* Cells that can be picked RIGHT NOW (any phase) */
+.bp-cell.pickable {
+  cursor: pointer;
+}
+
+/* First pick (top row cells) */
+.bp-cell.first-pick {
   border-color: rgba(252,238,10,0.5);
-  background: rgba(252,238,10,0.06);
+  background: rgba(252,238,10,0.08);
   color: var(--yellow, #fcee0a);
   text-shadow: 0 0 8px rgba(252,238,10,0.6);
   animation: bp-start-pulse 1.2s ease-in-out infinite;
-  cursor: pointer;
+}
+.bp-cell.first-pick:hover {
+  background: rgba(252,238,10,0.18);
+  border-color: var(--yellow);
+  box-shadow: 0 0 20px rgba(252,238,10,0.6);
+  transform: scale(1.06);
+}
+
+/* Subsequent picks (active axis row/col) */
+.bp-cell.next-pick {
+  border-color: rgba(57,255,20,0.5);
+  background: rgba(57,255,20,0.08);
+  color: #39ff14;
+  text-shadow: 0 0 8px rgba(57,255,20,0.6);
+  animation: bp-can-move 0.8s ease-in-out infinite;
+}
+.bp-cell.next-pick:hover {
+  background: rgba(57,255,20,0.18);
+  border-color: #39ff14;
+  box-shadow: 0 0 20px rgba(57,255,20,0.6);
+  transform: scale(1.06);
 }
 
 @keyframes bp-start-pulse {
   0%, 100% { box-shadow: 0 0 0 rgba(252,238,10,0); }
-  50% { box-shadow: 0 0 12px rgba(252,238,10,0.4); }
+  50% { box-shadow: 0 0 12px rgba(252,238,10,0.45); }
 }
-
-.bp-cell.start-cell:hover {
-  background: rgba(252,238,10,0.15);
-  border-color: var(--yellow);
-  box-shadow: 0 0 20px rgba(252,238,10,0.5);
-  transform: scale(1.05);
-}
-
-/* Adjacent cells (when game is playing) */
-.bp-cell.can-move {
-  border-color: rgba(57,255,20,0.4);
-  background: rgba(57,255,20,0.06);
-  color: var(--green, #39ff14);
-  text-shadow: 0 0 8px rgba(57,255,20,0.6);
-  cursor: pointer;
-  animation: bp-can-move 0.8s ease-in-out infinite;
-}
-
 @keyframes bp-can-move {
   0%, 100% { box-shadow: 0 0 0 rgba(57,255,20,0); }
-  50% { box-shadow: 0 0 10px rgba(57,255,20,0.35); }
+  50% { box-shadow: 0 0 10px rgba(57,255,20,0.4); }
 }
 
-.bp-cell.can-move:hover {
-  background: rgba(57,255,20,0.15);
-  border-color: var(--green);
-  transform: scale(1.06);
-}
-
-/* Current player position */
-.bp-cell.pos {
+/* The last selected cell (current position) */
+.bp-cell.last-pick {
   background: rgba(252,238,10,0.18);
   border: 2px solid var(--yellow);
   color: var(--yellow);
@@ -330,69 +367,15 @@
   animation: bp-pos-glow 0.9s ease-in-out infinite alternate;
   z-index: 2;
 }
-
 @keyframes bp-pos-glow {
   from { box-shadow: 0 0 15px rgba(252,238,10,0.5), inset 0 0 10px rgba(252,238,10,0.1); }
   to   { box-shadow: 0 0 25px rgba(252,238,10,0.7), inset 0 0 15px rgba(252,238,10,0.2); }
 }
 
-/* Visited trail cells */
-.bp-cell.visited {
-  opacity: 0.3;
-  border-style: dashed;
-  color: var(--text-dim, #6a6a80);
-  text-shadow: none;
-}
-
-/* ICE wall */
-.bp-cell.ice {
-  background: rgba(255,42,109,0.12);
-  border-color: rgba(255,42,109,0.5);
-  color: rgba(255,42,109,0.7);
-  cursor: not-allowed;
-  animation: bp-ice-glitch 2s steps(1) infinite;
-}
-
-.bp-ice-text {
-  font-size: .62rem;
-  letter-spacing: .1em;
-  color: var(--magenta, #ff2a6d);
-  text-shadow: 0 0 6px var(--magenta);
-  opacity: 0.7;
-}
-
-@keyframes bp-ice-glitch {
-  0%, 90%, 100% { opacity: 1; transform: translate(0); }
-  91% { opacity: 0.5; transform: translate(-2px, 0); }
-  93% { opacity: 1; transform: translate(1px, 0); }
-}
-
-/* Bonus cell */
-.bp-cell.bonus {
-  border-color: rgba(57,255,20,0.5);
-  background: rgba(57,255,20,0.08);
-  cursor: pointer;
-}
-
-.bp-cell.bonus.pos {
-  border-color: var(--yellow);
-}
-
-.bp-bonus-text {
-  font-size: .78rem;
-  color: var(--green, #39ff14);
-  text-shadow: 0 0 8px var(--green);
-  animation: bp-bonus-pulse 1.5s ease-in-out infinite;
-}
-
-@keyframes bp-bonus-pulse {
-  0%, 100% { opacity: 0.7; }
-  50% { opacity: 1; text-shadow: 0 0 14px var(--green); }
-}
-
-/* Clickable hint animation */
-.bp-cell.clickable {
-  cursor: pointer;
+/* The currently active axis row/column (subtle highlight) */
+.bp-cell.active-axis {
+  background: rgba(0,240,255,0.04);
+  border-color: rgba(0,240,255,0.15);
 }
 
 /* ── Status / Result ── */
@@ -456,21 +439,22 @@
 /* ── Controls ── */
 .bp-controls { display: flex; justify-content: center; margin-top: .8rem; gap: .8rem; }
 
-.bp-btn-restart {
+.bp-btn {
   font-family: 'Share Tech Mono', monospace;
   font-size: .7rem;
   letter-spacing: .15em;
   text-transform: uppercase;
-  color: var(--amber, #ff9d00);
   background: transparent;
-  border: 1px solid rgba(255,157,0,0.4);
   padding: .45rem 1.2rem;
   cursor: pointer;
   clip-path: polygon(6px 0, 100% 0, 100% calc(100% - 6px), calc(100% - 6px) 100%, 0 100%, 0 6px);
   transition: all .2s ease;
 }
-
-.bp-btn-restart:hover {
+.bp-btn-secondary {
+  color: var(--amber, #ff9d00);
+  border: 1px solid rgba(255,157,0,0.4);
+}
+.bp-btn-secondary:hover {
   background: rgba(255,157,0,0.1);
   border-color: var(--amber);
   box-shadow: 0 0 15px rgba(255,157,0,0.3);
