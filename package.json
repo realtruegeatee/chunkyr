@@ -1,6 +1,6 @@
 {
   "name": "chunkyr",
-  "version": "2.1.0",
+  "version": "2.2.0",
   "description": "CHUNKYR // Video Infiltration Protocol - Cyberpunk 2077-themed video downloader with breach protocol minigame",
   "main": "main.js",
   "scripts": {
