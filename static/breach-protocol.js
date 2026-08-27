@@ -179,33 +179,44 @@
     }
 
     _checkWin() {
-      const matched = this._countConsecutiveMatches();
-      if (matched === this._targets.length) {
-        this._win();
-        return;
+      // Win on matching any ONE sequence (gaps allowed in the buffer)
+      for (let tIdx = 0; tIdx < this._targets.length; tIdx++) {
+        if (this._seqMatches(this._targets[tIdx].seq, this._buffer)) {
+          this._winningTargetIdx = tIdx;
+          this._win();
+          return;
+        }
       }
       if (this._buffer.length >= this._bufferSize) {
         this._lose('BUFFER OVERFLOW');
       }
     }
 
-    _countConsecutiveMatches() {
-      let bufPos = 0;
-      let matched = 0;
-      for (const target of this._targets) {
-        if (bufPos + target.seq.length > this._buffer.length) break;
-        let ok = true;
-        for (let i = 0; i < target.seq.length; i++) {
-          if (this._buffer[bufPos + i] !== target.seq[i]) { ok = false; break; }
+    // Check if seq is a subsequence of buffer (gaps allowed)
+    _seqMatches(seq, buffer) {
+      let bufIdx = 0;
+      for (let s = 0; s < seq.length; s++) {
+        let found = false;
+        while (bufIdx < buffer.length) {
+          if (buffer[bufIdx] === seq[s]) { found = true; bufIdx++; break; }
+          bufIdx++;
         }
-        if (ok) {
-          bufPos += target.seq.length;
-          matched++;
-        } else {
-          break;
+        if (!found) return false;
+      }
+      return true;
+    }
+
+    // Get the indices of buffer slots that are part of the first matched sequence
+    _getMatchedSlotIndices(seq) {
+      const indices = [];
+      let bufIdx = 0;
+      for (let s = 0; s < seq.length; s++) {
+        while (bufIdx < this._buffer.length) {
+          if (this._buffer[bufIdx] === seq[s]) { indices.push(bufIdx); bufIdx++; break; }
+          bufIdx++;
         }
       }
-      return matched;
+      return indices;
     }
 
     _win() {
@@ -362,7 +373,7 @@
             <span>·</span>
             <span>ALTERNATE ROW/COLUMN</span>
             <span>·</span>
-            <span>EXTRACT ALL DAEMONS</span>
+            <span>EXTRACT A DAEMON</span>
           </div>
         </div>
       </div>
@@ -407,27 +418,15 @@
       const el = document.getElementById('bp-buffer');
       if (!el) return;
 
-      const matched = this._countConsecutiveMatches();
+      // Check which targets are matched (gaps allowed in buffer)
+      const matchedTargetIdx = this._targets.findIndex(t => this._seqMatches(t.seq, this._buffer));
+      const activeTargetIdx = matchedTargetIdx >= 0 ? matchedTargetIdx : 0;
 
-      // Calculate how many cells belong to each matched target for color coding
-      const cellColors = new Array(this._buffer.length).fill(null);
-      let bufPos = 0;
-      for (let tIdx = 0; tIdx < this._targets.length && bufPos < this._buffer.length; tIdx++) {
-        const target = this._targets[tIdx];
-        let ok = true;
-        for (let i = 0; i < target.seq.length; i++) {
-          if (this._buffer[bufPos + i] !== target.seq[i]) { ok = false; break; }
-        }
-        if (ok) {
-          for (let i = 0; i < target.seq.length; i++) {
-            if (bufPos + i < this._buffer.length) {
-              cellColors[bufPos + i] = target.color;
-            }
-          }
-          bufPos += target.seq.length;
-        } else {
-          break;
-        }
+      // Color cells: matched target's cells, rest stay default cyan
+      const cellColors = new Array(this._buffer.length).fill('#00f0ff');
+      if (matchedTargetIdx >= 0) {
+        const matchedIndices = this._getMatchedSlotIndices(this._targets[matchedTargetIdx].seq);
+        matchedIndices.forEach(i => { cellColors[i] = this._targets[matchedTargetIdx].color; });
       }
 
       // Build the buffer UI
@@ -446,29 +445,31 @@
       }
       el.innerHTML = slotsHTML;
 
-      // Update target states (highlight matched, fade others)
+      // Update target states
       this._targets.forEach((t, i) => {
         const targetEl = el.parentElement.querySelector(`.bp-target[data-target-idx="${i}"]`);
         if (!targetEl) return;
-        if (i < matched) {
+        if (i === matchedTargetIdx) {
           targetEl.classList.add('matched');
-        } else {
+          targetEl.classList.remove('active');
+        } else if (i === activeTargetIdx) {
+          targetEl.classList.add('active');
           targetEl.classList.remove('matched');
+        } else {
+          targetEl.classList.remove('active', 'matched');
         }
       });
-
-      // Update target DOM status
-      this._updateTargetStatus();
     }
 
     _updateTargetStatus() {
-      const matched = this._countConsecutiveMatches();
+      const matchedTargetIdx = this._targets.findIndex(t => this._seqMatches(t.seq, this._buffer));
+      const activeTargetIdx = matchedTargetIdx >= 0 ? matchedTargetIdx : 0;
       const targetEls = document.querySelectorAll('.bp-target');
       targetEls.forEach((el, i) => {
-        if (i < matched) {
+        if (i === matchedTargetIdx) {
           el.classList.add('matched');
           el.classList.remove('active');
-        } else if (i === matched) {
+        } else if (i === activeTargetIdx) {
           el.classList.add('active');
           el.classList.remove('matched');
         } else {
@@ -576,7 +577,7 @@
       if (!statusEl) return;
       statusEl.className = 'bp-status ' + (won ? 'won' : 'lost');
       statusEl.innerHTML = won
-        ? `<div class="bp-result-text">ACCESS GRANTED</div><div class="bp-result-sub">ALL DAEMONS EXTRACTED</div>`
+        ? `<div class="bp-result-text">ACCESS GRANTED</div><div class="bp-result-sub">DAEMON EXTRACTED</div>`
         : `<div class="bp-result-text">ACCESS DENIED</div><div class="bp-result-sub">${reason}</div>`;
     }
 
