@@ -1,0 +1,134 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1920 1080" width="1920" height="1080">
+  <defs>
+    <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="8" result="blur"/>
+      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <filter id="glow2" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="4" result="blur"/>
+      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#050508"/>
+      <stop offset="40%" stop-color="#0a0810"/>
+      <stop offset="100%" stop-color="#080510"/>
+    </linearGradient>
+    <linearGradient id="neonPink" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#ff0066"/>
+      <stop offset="50%" stop-color="#ff2a6d"/>
+      <stop offset="100%" stop-color="#ff0066"/>
+    </linearGradient>
+    <linearGradient id="neonCyan" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#00f0ff"/>
+      <stop offset="50%" stop-color="#00d4ff"/>
+      <stop offset="100%" stop-color="#00f0ff"/>
+    </linearGradient>
+    <linearGradient id="neonPurple" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#bf5af2"/>
+      <stop offset="100%" stop-color="#5e35b1"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="1920" height="1080" fill="url(#bgGrad)"/>
+
+  <g fill="#0a0a14" opacity="0.9">
+    <rect x="0" y="720" width="120" height="360"/>
+    <rect x="110" y="680" width="80" height="400"/>
+    <rect x="180" y="740" width="100" height="340"/>
+    <rect x="270" y="620" width="60" height="460"/>
+    <rect x="320" y="700" width="90" height="380"/>
+    <rect x="400" y="760" width="70" height="320"/>
+    <rect x="460" y="640" width="50" height="440"/>
+    <rect x="500" y="710" width="110" height="370"/>
+    <rect x="600" y="650" width="80" height="430"/>
+    <rect x="670" y="770" width="60" height="310"/>
+    <rect x="720" y="600" width="100" height="480"/>
+    <rect x="810" y="720" width="70" height="360"/>
+    <rect x="870" y="680" width="90" height="400"/>
+    <rect x="950" y="750" width="50" height="330"/>
+    <rect x="990" y="620" width="120" height="460"/>
+    <rect x="1100" y="700" width="80" height="380"/>
+    <rect x="1170" y="660" width="100" height="420"/>
+    <rect x="1260" y="740" width="70" height="340"/>
+    <rect x="1320" y="610" width="60" height="470"/>
+    <rect x="1370" y="690" width="110" height="390"/>
+    <rect x="1470" y="730" width="90" height="350"/>
+    <rect x="1550" y="670" width="70" height="410"/>
+    <rect x="1610" y="710" width="100" height="370"/>
+    <rect x="1700" y="650" width="60" height="430"/>
+    <rect x="1750" y="700" width="90" height="380"/>
+    <rect x="1830" y="760" width="90" height="320"/>
+  </g>
+
+  <g fill="#00f0ff" opacity="0.12">
+    <rect x="120" y="690" width="4" height="3" rx="1"/><rect x="130" y="700" width="4" height="3" rx="1"/>
+    <rect x="140" y="720" width="4" height="3" rx="1"/><rect x="125" y="750" width="4" height="3" rx="1"/>
+    <rect x="335" y="720" width="4" height="3" rx="1"/><rect x="350" y="740" width="4" height="3" rx="1"/>
+    <rect x="365" y="710" width="4" height="3" rx="1"/><rect x="380" y="755" width="4" height="3" rx="1"/>
+    <rect x="730" y="620" width="4" height="3" rx="1"/><rect x="750" y="650" width="4" height="3" rx="1"/>
+    <rect x="765" y="680" width="4" height="3" rx="1"/><rect x="740" y="720" width="4" height="3" rx="1"/>
+    <rect x="1000" y="650" width="4" height="3" rx="1"/><rect x="1020" y="680" width="4" height="3" rx="1"/>
+    <rect x="1040" y="710" width="4" height="3" rx="1"/><rect x="1010" y="750" width="4" height="3" rx="1"/>
+    <rect x="1330" y="640" width="4" height="3" rx="1"/><rect x="1350" y="670" width="4" height="3" rx="1"/>
+    <rect x="1380" y="720" width="4" height="3" rx="1"/><rect x="1345" y="760" width="4" height="3" rx="1"/>
+  </g>
+
+  <g filter="url(#glow)">
+    <rect x="560" y="300" width="800" height="200" rx="8" fill="#111120" stroke="#bf5af2" stroke-width="2" opacity="0.8"/>
+    <text x="590" y="400" font-family="Impact, Arial Black, sans-serif" font-size="110" font-weight="900" fill="url(#neonPink)" letter-spacing="8">SPIDER</text>
+    <text x="610" y="480" font-family="Impact, Arial Black, sans-serif" font-size="80" font-weight="900" fill="url(#neonCyan)" letter-spacing="4">MURPHYS</text>
+  </g>
+
+  <g stroke="#ff2a6d" stroke-width="1.5" fill="none" opacity="0.4">
+    <line x1="60" y1="60" x2="200" y2="180"/>
+    <line x1="60" y1="60" x2="280" y2="100"/>
+    <line x1="60" y1="60" x2="160" y2="240"/>
+    <line x1="60" y1="60" x2="320" y2="200"/>
+    <path d="M 80,90 Q 120,80 160,95 Q 180,110 200,180" opacity="0.6"/>
+    <path d="M 70,110 Q 140,95 210,115 Q 240,135 260,180" opacity="0.5"/>
+    <path d="M 65,130 Q 160,110 250,140 Q 280,160 290,210" opacity="0.4"/>
+    <circle cx="60" cy="60" r="3" fill="#ff2a6d" opacity="0.8"/>
+  </g>
+
+  <g stroke="#00f0ff" stroke-width="1.5" fill="none" opacity="0.4">
+    <line x1="1860" y1="60" x2="1720" y2="180"/>
+    <line x1="1860" y1="60" x2="1640" y2="100"/>
+    <line x1="1860" y1="60" x2="1760" y2="240"/>
+    <line x1="1860" y1="60" x2="1600" y2="200"/>
+    <path d="M 1840,90 Q 1800,80 1760,95 Q 1740,110 1720,180" opacity="0.6"/>
+    <path d="M 1850,110 Q 1780,95 1710,115 Q 1680,135 1660,180" opacity="0.5"/>
+    <path d="M 1855,130 Q 1760,110 1670,140 Q 1640,160 1630,210" opacity="0.4"/>
+    <circle cx="1860" cy="60" r="3" fill="#00f0ff" opacity="0.8"/>
+  </g>
+
+  <rect x="50" y="260" width="1820" height="560" rx="12" fill="none" stroke="url(#neonPurple)" stroke-width="3" opacity="0.3"/>
+  <rect x="55" y="265" width="1810" height="550" rx="10" fill="none" stroke="#bf5af2" stroke-width="1" opacity="0.15" stroke-dasharray="8 8"/>
+
+  <text x="960" y="520" text-anchor="middle" font-family="Impact, Arial Black, sans-serif" font-size="36" font-weight="900" fill="#fcee0a" letter-spacing="20" opacity="0.8" filter="url(#glow2)">BAR</text>
+
+  <g stroke="#bf5af2" stroke-width="1" opacity="0.2">
+    <line x1="200" y1="850" x2="1720" y2="850"/>
+    <line x1="300" y1="870" x2="1620" y2="870"/>
+    <line x1="400" y1="890" x2="1520" y2="890"/>
+  </g>
+
+  <ellipse cx="960" cy="860" rx="500" ry="20" fill="#ff2a6d" opacity="0.04"/>
+  <ellipse cx="960" cy="860" rx="300" ry="10" fill="#00f0ff" opacity="0.03"/>
+
+  <g filter="url(#glow2)" opacity="0.6">
+    <text x="150" y="720" font-family="monospace" font-size="14" fill="#ff9d00" letter-spacing="2">AFTERLIFE</text>
+    <text x="810" y="650" font-family="monospace" font-size="12" fill="#00f0ff" letter-spacing="2">NOMADS</text>
+    <text x="1180" y="710" font-family="monospace" font-size="12" fill="#bf5af2" letter-spacing="2">NETRUNNER</text>
+  </g>
+
+  <g fill="#ff2a6d" opacity="0.3">
+    <circle cx="200" cy="780" r="2"/><circle cx="240" cy="800" r="1.5"/>
+    <circle cx="700" cy="800" r="2"/><circle cx="1300" cy="820" r="2"/>
+    <circle cx="1650" cy="790" r="1.5"/><circle cx="400" cy="850" r="2"/>
+  </g>
+  <g fill="#00f0ff" opacity="0.3">
+    <circle cx="350" cy="820" r="1.5"/><circle cx="600" cy="840" r="2"/>
+    <circle cx="1100" cy="780" r="2"/><circle cx="1500" cy="810" r="1.5"/>
+    <circle cx="1000" cy="830" r="2"/>
+  </g>
+</svg>
