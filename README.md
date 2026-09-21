@@ -51,6 +51,84 @@ CORS_ORIGINS="https://<you>.github.io" python app.py
 `Content-Disposition` and `Content-Length` are exposed cross-origin, so the
 browser still sees the real filename and a live progress bar.
 
+## Self-host an extraction uplink
+
+The Pages build needs a reachable `app.py` for full yt-dlp support. Any
+machine that runs Python 3.10+ (or Docker) can be your node.
+
+### Option 1 — Docker (easiest)
+
+```bash
+docker build -t chunkyr .
+docker run -d -p 5000:5000 --name chunkyr chunkyr
+# or: docker compose up -d   (pre-set CORS_ORIGINS for the Pages site)
+```
+
+The image includes ffmpeg and a `/api/health` healthcheck.
+
+### Option 2 — Bare metal / VPS
+
+```bash
+git clone https://github.com/realtruegeatee/chunkyr.git && cd chunkyr
+./start.sh                      # venv + deps + ffmpeg + waitress on :5000
+```
+
+It's now live at `http://<server-ip>:5000` (`curl .../api/health` to verify).
+Keep it running with a systemd unit:
+
+```ini
+# /etc/systemd/system/chunkyr.service
+[Unit]
+Description=CHUNKYR extraction uplink
+After=network.target
+
+[Service]
+WorkingDirectory=/opt/chunkyr
+Environment=CORS_ORIGINS=https://<you>.github.io
+ExecStart=/opt/chunkyr/venv/bin/python app.py
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target
+```
+
+### Get HTTPS in front (required for the Pages site)
+
+GitHub Pages is `https://` — browsers block calls to a plain-`http://`
+public node (mixed content). Easiest fixes:
+
+- **Caddy** (auto Let's Encrypt): `caddy reverse-proxy --from dl.example.com --to localhost:5000`
+- **Cloudflare Tunnel** (no open ports, free cert): `cloudflared tunnel --url http://localhost:5000`
+- nginx + certbot if you prefer the classic route.
+
+*Local node exception:* if the backend runs on the **same machine you browse
+from** (`http://localhost:5000`) or your LAN, the Pages site can still reach
+it — the backend answers Chrome's Private Network Access preflight for you.
+
+### Connect the site to your node
+
+1. Open the site (Pages URL or wherever it's served).
+2. Click **UPLINK ▸** under the form, paste the node URL
+   (`https://dl.example.com` / `http://localhost:5000`), hit **SAVE**.
+3. The client handshakes `/api/health` — green diamond = locked, and the
+   full format list works again. Save once, it persists (localStorage).
+4. Share-ready deep link: `https://<you>.github.io/chunkyr/?api=https://dl.example.com`
+
+### Locking it down
+
+A public node is an open download proxy — at minimum restrict origins:
+
+| Variable                     | Default | Purpose                              |
+| ---------------------------- | ------- | ------------------------------------ |
+| `CORS_ORIGINS`               | `*`     | Comma-separated allowlist of origins |
+| `MAX_CONCURRENT_EXTRACTIONS` | `4`     | Global cap on parallel downloads     |
+| `PORT` / `HOST` / `THREADS`  | —       | waitress binding                     |
+
+Troubleshooting: `HANDSHAKE FAILED: unreachable` → HTTPS/mixed-content or
+firewall; `CORS-blocked` → your origin isn't in `CORS_ORIGINS`;
+"ffmpeg missing on node" after handshake → install ffmpeg (or use the
+Docker image) — combined formats ≤720p still work without it.
+
 ## What's New in v2.4
 
 - **GitHub Pages build** — static site in `docs/`, auto-deployed by Actions. Backendless direct-link ripping, or point UPLINK at a self-hosted backend for full yt-dlp power.

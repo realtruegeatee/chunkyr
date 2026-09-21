@@ -1,0 +1,17 @@
+# Convenience wrapper — plain `docker run` works too (see Dockerfile header).
+services:
+  chunkyr:
+    build: .
+    container_name: chunkyr
+    restart: unless-stopped
+    ports:
+      - "5000:5000"
+    environment:
+      # Lock cross-origin access to your GitHub Pages site (comma-separated).
+      # Default in app.py is "*" — fine for a private node, lax for public.
+      CORS_ORIGINS: "https://realtruegeatee.github.io"
+      # THREADS: "8"
+      # MAX_CONCURRENT_EXTRACTIONS: "4"
+    # Downloads are staged in a temp dir; cap them per container restart.
+    tmpfs:
+      - /tmp:size=2g

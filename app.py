@@ -136,6 +136,11 @@ def add_cors_headers(resp):
     resp.headers["Access-Control-Max-Age"] = "86400"
     # Without these, browsers hide the download filename and size from fetch().
     resp.headers["Access-Control-Expose-Headers"] = "Content-Disposition, Content-Length"
+    # Private Network Access: an https://….github.io page calling a backend on
+    # localhost / LAN is blocked by Chrome unless the preflight is explicitly
+    # acknowledged. Answer it so self-hosted local nodes work as uplinks.
+    if request.headers.get("Access-Control-Request-Private-Network") == "true":
+        resp.headers["Access-Control-Allow-Private-Network"] = "true"
     return resp
 
 
