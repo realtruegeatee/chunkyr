@@ -21,11 +21,23 @@ Bonus: `?api=<backend-url>` in the URL presets the uplink for one click.
 
 ### Deployment
 
-- The workflow `.github/workflows/pages.yml` builds `docs/` from `static/`
-  (`scripts/build-pages.sh`) and deploys it automatically on every push.
-- One-time setup in the repo: **Settings → Pages → Source: GitHub Actions**.
-- `static/` is the single source of truth; `docs/` is generated — regenerate
-  with `./scripts/build-pages.sh` when editing the frontend by hand.
+Everything is committed; publishing needs **one manual click** in the repo
+(a bot token can't flip this setting):
+
+- **Option A — classic, zero Actions** (works today):
+  **Settings → Pages → Source: "Deploy from a branch" →
+  branch `arena/01a0c290-chunkyr`, folder `/docs` → Save.**
+  GitHub publishes the pre-built `docs/` folder (`.nojekyll` included).
+  Re-run `./scripts/build-pages.sh` after frontend edits and commit.
+- **Option B — GitHub Actions** (auto-deploys on every push):
+  **Settings → Pages → Source: "GitHub Actions"**, plus
+  **Settings → Actions → General → Workflow permissions →
+  "Read and write permissions"** (needed so the workflow can bootstrap the
+  Pages site itself). `.github/workflows/pages.yml` rebuilds and publishes
+  `docs/` on each push.
+- Either way the site lands at `https://<owner>.github.io/chunkyr/`.
+- `static/` is the single source of truth; `docs/` is generated — never
+  edit `docs/` by hand.
 
 ### Backend CORS
 

@@ -33,10 +33,15 @@ jobs:
       - name: Build static site (docs/)
         run: ./scripts/build-pages.sh
 
+      # Tries to auto-enable the Pages site (build_type=workflow) if it does
+      # not exist yet. Requires: repo Settings → Actions → "Read and write
+      # permissions" for workflows. If Pages is enabled MANUALLY instead
+      # (Settings → Pages), this step can fail harmlessly — deployment still
+      # works via upload-pages-artifact + deploy-pages below.
       - name: Configure Pages
         uses: actions/configure-pages@v5
+        continue-on-error: true
         with:
-          # Create the Pages site on first run if it doesn't exist yet
           enablement: true
 
       - name: Upload artifact
