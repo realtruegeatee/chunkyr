@@ -1,0 +1,46 @@
+name: Deploy CHUNKYR to GitHub Pages
+
+# Builds the static site from static/ (via scripts/build-pages.sh into docs/)
+# and publishes it to GitHub Pages.
+
+on:
+  push:
+    branches:
+      - arena/01a0c290-chunkyr
+      - master
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# One Pages deployment at a time
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Build static site (docs/)
+        run: ./scripts/build-pages.sh
+
+      - name: Configure Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: docs
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

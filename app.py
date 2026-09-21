@@ -5,12 +5,11 @@ Runs as a website: serves the static frontend at `/` plus a JSON API
 (`/api/info`, `/api/download`, `/api/health`). Bind host/port via the
 HOST and PORT environment variables (defaults: 0.0.0.0:5000).
 """
-from flask import Flask, request, jsonify, send_file, Response
+from flask import Flask, request, jsonify, send_file
 import yt_dlp
 import os
 import re
 import shutil
-import subprocess
 import tempfile
 import uuid
 import threading
@@ -109,6 +108,35 @@ def client_key() -> str:
     if fwd:
         return fwd.split(",")[0].strip() or "unknown"
     return request.remote_addr or "unknown"
+
+
+# ── CORS ────────────────────────────────────────────────────────────────────
+# The static GitHub Pages build (or any other origin) may be configured to use
+# this server as its extraction "uplink". Allow cross-origin API calls so that
+# works. Default '*' because the API is read-only JSON + file downloads and
+# carries no credentials; restrict with CORS_ORIGINS="https://you.github.io,…"
+CORS_ORIGINS = [o.strip() for o in os.environ.get("CORS_ORIGINS", "*").split(",") if o.strip()]
+
+
+@app.after_request
+def add_cors_headers(resp):
+    origin = request.headers.get("Origin")
+    if not origin:
+        return resp
+    if "*" in CORS_ORIGINS:
+        allow = "*"
+    elif origin in CORS_ORIGINS:
+        allow = origin
+        resp.headers.add("Vary", "Origin")
+    else:
+        return resp
+    resp.headers["Access-Control-Allow-Origin"] = allow
+    resp.headers["Access-Control-Allow-Methods"] = "GET, POST, OPTIONS"
+    resp.headers["Access-Control-Allow-Headers"] = "Content-Type, Accept"
+    resp.headers["Access-Control-Max-Age"] = "86400"
+    # Without these, browsers hide the download filename and size from fetch().
+    resp.headers["Access-Control-Expose-Headers"] = "Content-Disposition, Content-Length"
+    return resp
 
 
 @app.route("/")
