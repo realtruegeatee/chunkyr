@@ -1,2 +1,7 @@
 flask>=3.0.0
 yt-dlp>=2024.5.27
+# Website mode: production WSGI server
+waitress>=3.0.0
+# Optional: bundles a static ffmpeg binary for hosts where ffmpeg isn't
+# installed system-wide (app.py falls back to it automatically).
+imageio-ffmpeg>=0.5.1

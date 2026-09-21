@@ -1,5 +1,9 @@
 """
-Video Downloader - Flask backend using yt-dlp
+CHUNKYR // Video Infiltration Protocol — Flask backend using yt-dlp.
+
+Runs as a website: serves the static frontend at `/` plus a JSON API
+(`/api/info`, `/api/download`, `/api/health`). Bind host/port via the
+HOST and PORT environment variables (defaults: 0.0.0.0:5000).
 """
 from flask import Flask, request, jsonify, send_file, Response
 import yt_dlp
@@ -15,13 +19,21 @@ from pathlib import Path
 
 app = Flask(__name__, static_folder='static', template_folder='templates')
 
-# Locate ffmpeg: prefer one on PATH; otherwise check the winget install location.
-# yt-dlp needs ffmpeg to merge separate video+audio streams (e.g. 1080p+ on YouTube).
+# Locate ffmpeg: prefer one on PATH; otherwise check well-known install
+# locations (Linux/macOS first, then the Windows fallbacks kept from the
+# desktop build). yt-dlp needs ffmpeg to merge separate video+audio
+# streams (e.g. 1080p+ on YouTube).
 def find_ffmpeg():
     ffmpeg = shutil.which("ffmpeg")
     if ffmpeg:
         return ffmpeg
     candidates = [
+        # Linux / macOS
+        Path("/usr/local/bin/ffmpeg"),
+        Path("/usr/bin/ffmpeg"),
+        Path("/opt/ffmpeg/bin/ffmpeg"),
+        Path.home() / ".local" / "bin" / "ffmpeg",
+        # Windows (desktop builds)
         Path(os.environ.get("LOCALAPPDATA", "")) / "Microsoft" / "WinGet" / "Packages" / "Gyan.FFmpeg_Microsoft.Winget.Source_8wekyb3d8bbwe" / "ffmpeg-9.0.1-full_build" / "bin" / "ffmpeg.exe",
         Path("C:/Program Files/ffmpeg/bin/ffmpeg.exe"),
         Path("C:/ffmpeg/bin/ffmpeg.exe"),
@@ -29,7 +41,12 @@ def find_ffmpeg():
     for c in candidates:
         if c.exists():
             return str(c)
-    return None
+    # Last resort: an ffmpeg binary bundled by the imageio-ffmpeg package.
+    try:
+        import imageio_ffmpeg
+        return imageio_ffmpeg.get_ffmpeg_exe()
+    except Exception:
+        return None
 
 FFMPEG_PATH = find_ffmpeg()
 if FFMPEG_PATH:
@@ -60,14 +77,60 @@ def is_valid_url(url: str) -> bool:
     return bool(URL_RE.match(url or ""))
 
 
+# ── Website-mode protections ────────────────────────────────────────────────
+# Extraction (yt-dlp downloading + ffmpeg merging) is heavy. Cap how many run
+# at once, and rate-limit API calls per client IP so a single visitor can't
+# monopolise the server. Both are simple in-memory guards — fine for a single
+# process; swap for Redis/flask-limiter if you scale out.
+
+MAX_CONCURRENT_EXTRACTIONS = int(os.environ.get("MAX_CONCURRENT_EXTRACTIONS", "4"))
+EXTRACTION_SLOTS = threading.BoundedSemaphore(MAX_CONCURRENT_EXTRACTIONS)
+
+_rate_lock = threading.Lock()
+_rate_buckets = {}  # key -> list[timestamps]
+
+
+def rate_limited(key: str, max_hits: int, window_seconds: int) -> bool:
+    """True if `key` has exceeded max_hits within the sliding window."""
+    now = time.time()
+    with _rate_lock:
+        hits = [t for t in _rate_buckets.get(key, []) if now - t < window_seconds]
+        if len(hits) >= max_hits:
+            _rate_buckets[key] = hits
+            return True
+        hits.append(now)
+        _rate_buckets[key] = hits
+        return False
+
+
+def client_key() -> str:
+    # Honour the first X-Forwarded-For hop set by a trusted reverse proxy.
+    fwd = request.headers.get("X-Forwarded-For", "")
+    if fwd:
+        return fwd.split(",")[0].strip() or "unknown"
+    return request.remote_addr or "unknown"
+
+
 @app.route("/")
 def index():
     return app.send_static_file("index.html")
 
 
+@app.route("/api/health")
+def health():
+    return jsonify({
+        "status": "ok",
+        "service": "CHUNKYR // Video Infiltration Protocol",
+        "ffmpeg": bool(FFMPEG_PATH),
+    })
+
+
 @app.route("/api/info", methods=["POST"])
 def get_info():
     """Fetch video metadata without downloading."""
+    if rate_limited(f"info:{client_key()}", max_hits=30, window_seconds=60):
+        return jsonify({"error": "Rate limit exceeded — slow down, v. Try again in a minute."}), 429
+
     data = request.get_json(silent=True) or {}
     url = (data.get("url") or "").strip()
 
@@ -187,6 +250,9 @@ def get_info():
 @app.route("/api/download", methods=["POST"])
 def download():
     """Download the video and stream it back to the client."""
+    if rate_limited(f"download:{client_key()}", max_hits=10, window_seconds=60):
+        return jsonify({"error": "Rate limit exceeded — slow down, v. Try again in a minute."}), 429
+
     data = request.get_json(silent=True) or {}
     url = (data.get("url") or "").strip()
     format_id = data.get("format_id")
@@ -194,62 +260,80 @@ def download():
     if not is_valid_url(url):
         return jsonify({"error": "Please enter a valid URL."}), 400
 
-    token = uuid.uuid4().hex[:12]
-    outtmpl = str(DOWNLOAD_DIR / f"{token}.%(ext)s")
-
-    # format_id is now always an exact yt-dlp format_id (or empty for best)
-    is_combined = bool(data.get("is_combined"))
-    if format_id:
-        if is_combined:
-            # Single-stream format — download as-is
-            fmt = format_id
-        else:
-            # Video-only stream — need to merge with best audio
-            fmt = f"{format_id}+bestaudio/best"
-    else:
-        fmt = "bestvideo+bestaudio/best"
-
-    ydl_opts = {
-        "quiet": True,
-        "no_warnings": True,
-        "noplaylist": True,
-        "outtmpl": outtmpl,
-        "format": fmt,
-        "merge_output_format": "mp4",
-    }
-    if FFMPEG_PATH:
-        ydl_opts["ffmpeg_location"] = str(Path(FFMPEG_PATH).parent)
+    # Only a few extractions may run concurrently on a public site.
+    if not EXTRACTION_SLOTS.acquire(timeout=180):
+        return jsonify({"error": "Server busy — all extraction slots are in use. Try again shortly."}), 429
 
     try:
-        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-            info = ydl.extract_info(url, download=True)
-            filename = ydl.prepare_filename(info)
-    except Exception as e:
-        return jsonify({"error": f"Download failed: {str(e)[:200]}"}), 500
+        token = uuid.uuid4().hex[:12]
+        outtmpl = str(DOWNLOAD_DIR / f"{token}.%(ext)s")
 
-    if not os.path.exists(filename):
-        # yt-dlp may have merged into a different extension
-        base = os.path.splitext(filename)[0]
-        for ext in ("mp4", "mkv", "webm", "mp3", "m4a", "opus"):
-            candidate = base + "." + ext
-            if os.path.exists(candidate):
-                filename = candidate
-                break
+        # format_id is now always an exact yt-dlp format_id (or empty for best)
+        is_combined = bool(data.get("is_combined"))
+        if format_id:
+            if is_combined:
+                # Single-stream format — download as-is
+                fmt = format_id
+            else:
+                # Video-only stream — need to merge with best audio
+                fmt = f"{format_id}+bestaudio/best"
         else:
-            return jsonify({"error": "Downloaded file not found."}), 500
+            fmt = "bestvideo+bestaudio/best"
 
-    title = info.get("title", "video")
-    safe_title = re.sub(r'[^\w\s.-]', '', title)[:80].strip() or "video"
-    download_name = f"{safe_title}{os.path.splitext(filename)[1]}"
+        ydl_opts = {
+            "quiet": True,
+            "no_warnings": True,
+            "noplaylist": True,
+            "outtmpl": outtmpl,
+            "format": fmt,
+            "merge_output_format": "mp4",
+        }
+        if FFMPEG_PATH:
+            ydl_opts["ffmpeg_location"] = str(Path(FFMPEG_PATH).parent)
 
-    return send_file(
-        filename,
-        as_attachment=True,
-        download_name=download_name,
-    )
+        try:
+            with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+                info = ydl.extract_info(url, download=True)
+                filename = ydl.prepare_filename(info)
+        except Exception as e:
+            return jsonify({"error": f"Download failed: {str(e)[:200]}"}), 500
+
+        if not os.path.exists(filename):
+            # yt-dlp may have merged into a different extension
+            base = os.path.splitext(filename)[0]
+            for ext in ("mp4", "mkv", "webm", "mp3", "m4a", "opus"):
+                candidate = base + "." + ext
+                if os.path.exists(candidate):
+                    filename = candidate
+                    break
+            else:
+                return jsonify({"error": "Downloaded file not found."}), 500
+
+        title = info.get("title", "video")
+        safe_title = re.sub(r'[^\w\s.-]', '', title)[:80].strip() or "video"
+        download_name = f"{safe_title}{os.path.splitext(filename)[1]}"
+
+        return send_file(
+            filename,
+            as_attachment=True,
+            download_name=download_name,
+        )
+    finally:
+        EXTRACTION_SLOTS.release()
 
 
 if __name__ == "__main__":
+    HOST = os.environ.get("HOST", "0.0.0.0")
+    PORT = int(os.environ.get("PORT", "5000"))
+    THREADS = int(os.environ.get("THREADS", "8"))
+
     print(f"Downloads temp dir: {DOWNLOAD_DIR}")
-    print("Open http://localhost:5000 in your browser")
-    app.run(host="127.0.0.1", port=5000, debug=False)
+    print(f"CHUNKYR website listening on http://{HOST}:{PORT}")
+
+    try:
+        # Production WSGI server (pip install waitress — in requirements.txt).
+        from waitress import serve
+        serve(app, host=HOST, port=PORT, threads=THREADS)
+    except ImportError:
+        print("waitress not installed — falling back to the Flask dev server.")
+        app.run(host=HOST, port=PORT, debug=False, threaded=True)
