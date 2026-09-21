@@ -1,16 +1,51 @@
-# CHUNKYR // Video Infiltration Protocol v2.0
+# CHUNKYR // Video Infiltration Protocol v2.4
 
 A Cyberpunk 2077-themed video downloader. Jack in, v. Pick v's target. Breach the ICE. Extract the data.
 
-Runs as a **website** (Flask + waitress, served straight to your browser) — or as an **Electron desktop app** with the same interface. Powered by [`yt-dlp`](https://github.com/yt-dlp/yt-dlp) under the hood.
+Runs three ways: as a **static site on GitHub Pages**, as a **self-hosted website** (Flask + waitress), or as an **Electron desktop app** — same interface everywhere. Powered by [`yt-dlp`](https://github.com/yt-dlp/yt-dlp) under the hood.
 
-## What's New in v2.0
+## Run on GitHub Pages (static build)
 
-- **Website mode** — run it on any server with `python app.py`. No Electron required.
-- **Desktop app** — packaged with Electron. No more browser tabs.
-- **Breach Protocol minigame** — every download requires v to hack a 5×5 hex grid before extraction. Like NetWatch, but real.
-- **Auto-install** — `yt-dlp` and `ffmpeg` are checked and installed on first launch.
-- **V everywhere** — the UI refers to the user as "v", because v is the protagonist of Night City.
+The frontend is a static site — no server code runs on GitHub Pages. Two ways to use it:
+
+1. **Backendless (direct-link mode)** — out of the box, the Pages build rips
+   **direct media links** (`.mp4`, `.webm`, `.mp3`, `.m4a`, `.m3u8`, …)
+   entirely in-browser: fetch → Breach Protocol → save. Hosts must allow
+   cross-origin reads (CORS); if a target refuses, the UI tells you.
+2. **With an extraction uplink (full yt-dlp power)** — run the Flask backend
+   anywhere (`python app.py`, must be HTTPS-reachable), then open the Pages
+   site, click **UPLINK**, paste the backend URL and hit SAVE. JACK IN /
+   EXECUTE then work for all 1500+ supported sites.
+
+Bonus: `?api=<backend-url>` in the URL presets the uplink for one click.
+
+### Deployment
+
+- The workflow `.github/workflows/pages.yml` builds `docs/` from `static/`
+  (`scripts/build-pages.sh`) and deploys it automatically on every push.
+- One-time setup in the repo: **Settings → Pages → Source: GitHub Actions**.
+- `static/` is the single source of truth; `docs/` is generated — regenerate
+  with `./scripts/build-pages.sh` when editing the frontend by hand.
+
+### Backend CORS
+
+The backend sends permissive CORS headers by default so the Pages site can
+call it. Lock it down to your Pages origin in production:
+
+```bash
+CORS_ORIGINS="https://<you>.github.io" python app.py
+```
+
+`Content-Disposition` and `Content-Length` are exposed cross-origin, so the
+browser still sees the real filename and a live progress bar.
+
+## What's New in v2.4
+
+- **GitHub Pages build** — static site in `docs/`, auto-deployed by Actions. Backendless direct-link ripping, or point UPLINK at a self-hosted backend for full yt-dlp power.
+- **Winnable breaches** — daemon sequences are now guaranteed to lie on a legal grid path (previously most runs were mathematically impossible).
+- **Minigame fixes** — RESTART no longer bricks the run, added ABORT (button + Escape), and real keyboard controls (arrows/WASD + Enter).
+- **Security** — video metadata is rendered XSS-safe; backend CORS is configurable (`CORS_ORIGINS`).
+- **Real progress bar** — streamed downloads now show live percentage/MB instead of a frozen 0%.
 
 ## Files
 
@@ -23,8 +58,14 @@ video-downloader/
 ├── start.sh              # One-click website launcher (Linux/macOS)
 ├── start.bat             # One-click desktop launcher (Windows)
 ├── requirements.txt      # Python dependencies
+├── scripts/
+│   └── build-pages.sh    # Builds docs/ from static/ for GitHub Pages
+├── docs/                 # GENERATED static site (GitHub Pages) — don't edit
+├── .github/workflows/
+│   └── pages.yml         # Pages deployment (Actions)
 ├── static/
-│   ├── index.html        # Main UI
+│   ├── index.html        # Main UI (source of truth)
+│   ├── chunkyr-web.js    # Uplink layer (API base, direct-link, streaming)
 │   ├── breach-protocol.js  # Minigame logic
 │   ├── breach-protocol.css # Minigame styles
 │   ├── splash.html       # Bootstrap splash screen (desktop mode)
@@ -130,11 +171,12 @@ npm run build:portable    # portable .exe only
 2. **Click "JACK IN"** to fetch video info and available formats.
 3. **Select a quality** (e.g. 1080p, 720p, or audio-only).
 4. **Click "EXECUTE"** — the Breach Protocol minigame opens.
-5. **Solve the minigame** within 20 seconds:
-   - Move through the 5×5 grid with **arrow keys**, **WASD**, or **click**
-   - Collect the hex codes in the order shown in the TARGET SEQUENCES
-   - Avoid `██` ICE walls and re-visited cells
-   - Fill the 7-slot buffer before time runs out
+5. **Extract a daemon** within 20 seconds:
+   - First pick must come from the **top row**; after that the game alternates **column → row → column…**
+   - **Click** a cell, or move the cursor with **arrow keys / WASD** and pick with **Enter**
+   - Match all codes of any TARGET SEQUENCE in order (gaps in the buffer are fine)
+   - Don't overflow the 7-slot buffer, and don't run out the clock
+   - **RESTART** rerolls the grid; **ABORT** / **Escape** bails out
 6. **Success** → download proceeds automatically. **Failure** → access denied, try again.
 
 ## Supported Sites
